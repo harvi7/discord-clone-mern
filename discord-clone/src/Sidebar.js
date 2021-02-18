@@ -9,13 +9,17 @@ import MicIcon from '@material-ui/icons/Mic'
 import HeadsetIcon from '@material-ui/icons/Headset'
 import SettingsIcon from '@material-ui/icons/Settings'
 import { useSelector } from 'react-redux'
+import Pusher from 'pusher-js'   
 
 import './Sidebar.css'
 import SidebarChannel from './SidebarChannel'
 import { selectUser } from './features/userSlice'
 import db, { auth } from './firebase'
-
 import axios from './axios'
+
+const pusher = new Pusher('6d8e5da305e40eae8cce', {
+    cluster: 'us3'
+});
 
 function Sidebar() {
     const user = useSelector(selectUser)
@@ -30,6 +34,11 @@ function Sidebar() {
 
     useEffect(() => {
         getChannels()
+
+        const channel = pusher.subscribe('channels');
+        channel.bind('newChannel', function(data) {
+            getChannels()
+        });
     }, [])
 
     const handleAddChannel = (e) => {
@@ -37,7 +46,7 @@ function Sidebar() {
         const channelName = prompt("Enter a new channel name")
 
         if (channelName) {
-            db.collection('channels').add({
+            axios.post('/new/channel', {
                 channelName: channelName
             })
         }

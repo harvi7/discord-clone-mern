@@ -5,6 +5,7 @@ import GifIcon from '@material-ui/icons/Gif'
 import EmojiEmotionsIcon from '@material-ui/icons/EmojiEmotions'
 import { useSelector } from 'react-redux'
 import firebase from 'firebase'
+import Pusher from 'pusher-js'
 
 import './Chat.css'
 import ChatHeader from './ChatHeader'
@@ -13,6 +14,10 @@ import { selectUser } from '../../features/userSlice'
 import { selectChannelId, selectChannelName } from '../../features/appSlice'
 import db from '../../firebase'
 import axios from '../../axios'
+
+const pusher = new Pusher('6d8e5da305e40eae8cce', {
+    cluster: 'us3'
+});
 
 function Chat() {
     const user = useSelector(selectUser)
@@ -25,13 +30,17 @@ function Chat() {
         if (channelId) {
             axios.get(`/get/conversation?id=${channelId}`).then((res) => {
                 setMessages(res.data[0].conversation)
-                console.log(res.data[0].conversation)
             })
         }
     }
 
     useEffect(() => {
         getConversation(channelId)
+
+        const channel = pusher.subscribe('conversation');
+        channel.bind('newMessage', function(data) {
+            getConversation(channelId)
+        });
     }, [channelId])
 
     const sendMessage = e => {

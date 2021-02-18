@@ -4,12 +4,21 @@
 const express = require('express')
 const mongoose = require('mongoose')
 const cors = require('cors')
+const Pusher = require("pusher");
 
 const mongoData = require('./mongoData')
 
 // app config
 const app = express()
 const port = process.env.PORT || 8002
+
+const pusher = new Pusher({
+  appId: "1157905",
+  key: "6d8e5da305e40eae8cce",
+  secret: "6845bfddaeed7d62111b",
+  cluster: "us3",
+  useTLS: true
+});
 
 // middlewares
 app.use(express.json())
@@ -22,6 +31,26 @@ mongoose.connect(monogoURI, {
     useCreateIndex: true,
     useNewUrlParser: true,
     useUnifiedTopology: true
+})
+
+mongoose.connection.once('open', () => {
+    console.log('DB connected')
+
+    const changeStream = mongoose.model('conversations').watch()
+    changeStream.on('change', (change) => {
+        if (change.operationType === 'insert') {
+            pusher.trigger('channels', 'newChannel', {
+                'change': change
+            })
+        } else if (change.operationType === 'update') {
+            pusher.trigger('conversation', 'newMessage', {
+                'change': change
+            })
+        } else {
+            console.log('Error triggering Pusher')
+        }
+    
+    })
 })
 
 // api routes
